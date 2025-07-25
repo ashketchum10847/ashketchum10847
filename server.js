@@ -11,10 +11,16 @@ app.use(express.static(path.join(__dirname, 'public')));
 // Helper to read data
 function readData() {
   if (!fs.existsSync(DATA_FILE)) {
-    fs.writeFileSync(DATA_FILE, JSON.stringify({ transactions: [] }, null, 2));
+    fs.writeFileSync(
+      DATA_FILE,
+      JSON.stringify({ transactions: [], tasks: [] }, null, 2)
+    );
   }
   const raw = fs.readFileSync(DATA_FILE);
-  return JSON.parse(raw);
+  const data = JSON.parse(raw);
+  if (!data.tasks) data.tasks = [];
+  if (!data.transactions) data.transactions = [];
+  return data;
 }
 
 function writeData(data) {
@@ -38,6 +44,30 @@ app.post('/api/transactions', (req, res) => {
   data.transactions.push(tx);
   writeData(data);
   res.json(tx);
+});
+
+app.get('/api/tasks', (req, res) => {
+  const data = readData();
+  res.json(data.tasks);
+});
+
+app.post('/api/tasks', (req, res) => {
+  const data = readData();
+  const task = {
+    id: Date.now(),
+    text: req.body.text || ''
+  };
+  data.tasks.push(task);
+  writeData(data);
+  res.json(task);
+});
+
+app.delete('/api/tasks/:id', (req, res) => {
+  const data = readData();
+  const id = Number(req.params.id);
+  data.tasks = data.tasks.filter(t => t.id !== id);
+  writeData(data);
+  res.json({ success: true });
 });
 
 app.listen(PORT, () => {
